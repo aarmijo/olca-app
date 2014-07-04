@@ -3,7 +3,7 @@ bin
 libs
 
 # database templates
-db_templates
+# db_templates
 
 # IDE settings
 /.idea

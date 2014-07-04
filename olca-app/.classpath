@@ -64,11 +64,10 @@
 	<classpathentry exported="true" kind="lib" path="libs/jts-1.13.jar"/>
 	<classpathentry exported="true" kind="lib" path="libs/log4j-1.2.17.jar"/>
 	<classpathentry exported="true" kind="lib" path="libs/mysql-connector-java-5.1.23.jar"/>
-	<classpathentry exported="true" kind="lib" path="libs/ojalgo-34.8.jar"/>
 	<classpathentry exported="true" kind="lib" path="libs/olca-core-1.0.0.jar" sourcepath="/olca-core"/>
 	<classpathentry exported="true" kind="lib" path="libs/olca-ecospold-1-1.0.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="libs/olca-ecospold-2-1.0.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="libs/olca-eigen-0.3.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/olca-eigen-0.3.0.jar" sourcepath="D:/Users/105009/git/olca-modules/olca-eigen/src"/>
 	<classpathentry exported="true" kind="lib" path="libs/olca-formula-1.0.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="libs/olca-ilcd-1.0.0.jar" sourcepath="/olca-ilcd"/>
 	<classpathentry exported="true" kind="lib" path="libs/olca-io-1.0.0.jar" sourcepath="/olca-io"/>
@@ -96,6 +95,7 @@
 	<classpathentry exported="true" kind="lib" path="libs/zt-zip-1.6.jar"/>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jre8"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jre1.8.0_05"/>
+	<classpathentry kind="lib" path="libs/ojalgo-34.8.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

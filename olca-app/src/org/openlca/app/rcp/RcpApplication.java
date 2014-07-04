@@ -5,11 +5,15 @@ import org.eclipse.equinox.app.IApplicationContext;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
+import org.tecnalia.proseco.app.Connector;
 
 public class RcpApplication implements IApplication {
 
 	@Override
 	public Object start(final IApplicationContext context) throws Exception {
+		
+		//Connector.init();
+		
 		Object result = null;
 		Display display = PlatformUI.createDisplay();
 		try {
