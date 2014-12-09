@@ -95,7 +95,31 @@
 	<classpathentry exported="true" kind="lib" path="libs/zt-zip-1.6.jar"/>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jre1.8.0_05"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="libs/ojalgo-34.8.jar"/>
+	<classpathentry kind="lib" path="libs/activation-1.1.jar"/>
+	<classpathentry kind="lib" path="libs/alfresco-opencmis-extension-0.7.jar"/>
+	<classpathentry kind="lib" path="libs/chemistry-opencmis-client-api-0.10.0.jar"/>
+	<classpathentry kind="lib" path="libs/chemistry-opencmis-client-bindings-0.10.0.jar"/>
+	<classpathentry kind="lib" path="libs/chemistry-opencmis-client-impl-0.10.0.jar"/>
+	<classpathentry kind="lib" path="libs/chemistry-opencmis-commons-api-0.10.0.jar"/>
+	<classpathentry kind="lib" path="libs/chemistry-opencmis-commons-impl-0.10.0.jar"/>
+	<classpathentry kind="lib" path="libs/jaxb-api-2.1.jar"/>
+	<classpathentry kind="lib" path="libs/jaxb-impl-2.1.11.jar"/>
+	<classpathentry kind="lib" path="libs/jaxws-api-2.1.jar"/>
+	<classpathentry kind="lib" path="libs/jaxws-rt-2.1.7.jar"/>
+	<classpathentry kind="lib" path="libs/json-simple-1.1.jar"/>
+	<classpathentry kind="lib" path="libs/mimepull-1.3.jar"/>
+	<classpathentry kind="lib" path="libs/org.osgi.core-1.0.0.jar"/>
+	<classpathentry kind="lib" path="libs/resolver-20050927.jar"/>
+	<classpathentry kind="lib" path="libs/saaj-api-1.3.jar"/>
+	<classpathentry kind="lib" path="libs/saaj-impl-1.3.3.jar"/>
+	<classpathentry kind="lib" path="libs/stax-api-1.0-2.jar"/>
+	<classpathentry kind="lib" path="libs/stax-ex-1.2.jar"/>
+	<classpathentry kind="lib" path="libs/stax2-api-3.1.1.jar"/>
+	<classpathentry kind="lib" path="libs/streambuffer-0.9.jar"/>
+	<classpathentry kind="lib" path="libs/woodstox-core-asl-4.2.0.jar"/>
+	<classpathentry kind="lib" path="libs/jcommon-1.0.23.jar"/>
+	<classpathentry kind="lib" path="libs/jfreechart-1.0.19.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

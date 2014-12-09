@@ -237,7 +237,7 @@
 			<artifactId>olca-geo</artifactId>
 			<version>0.0.1</version>
 		</dependency>
-
+		
 		<dependency>
 			<groupId>org.geotools</groupId>
 			<artifactId>gt-swt</artifactId>
@@ -278,6 +278,69 @@
 			</exclusions>
 		</dependency>
 
+		<!-- Dependency for ProSEco CMIS functionality -->
+		<dependency>
+			<groupId>org.apache.chemistry.opencmis</groupId>
+			<artifactId>chemistry-opencmis-client-impl</artifactId>
+			<version>0.10.0</version>
+			<!--  <exclusions>
+				<exclusion>
+					<artifactId>woodstox-core-asl</artifactId>
+					<groupId>org.codehaus.woodstox</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>stax-api</artifactId>
+					<groupId>javax.xml.stream</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>stax-ex</artifactId>
+					<groupId>org.jvnet.staxex</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>saaj-impl</artifactId>
+					<groupId>com.sun.xml.messaging.saaj</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>jaxb-api</artifactId>
+					<groupId>javax.xml.bind</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>jaxws-api</artifactId>
+					<groupId>javax.xml.ws</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>jaxws-rt</artifactId>
+					<groupId>com.sun.xml.ws</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>jaxb-impl</artifactId>
+					<groupId>com.sun.xml.bind</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>saaj-api</artifactId>
+					<groupId>javax.xml.soap</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>org.osgi.core</artifactId>
+					<groupId>org.apache.felix</groupId>
+				</exclusion>
+			</exclusions>  -->
+		</dependency>
+		
+		<!-- Dependency for ProSEco CMIS functionality -->
+		<dependency>
+			<groupId>org.alfresco.cmis.client</groupId>
+			<artifactId>alfresco-opencmis-extension</artifactId>
+			<version>0.7</version>
+		</dependency>
+		
+		<!-- Dependency for ProSeco Charting -->
+		<dependency>
+			<groupId>org.jfree</groupId>
+			<artifactId>jfreechart</artifactId>
+			<version>1.0.19</version>
+		</dependency>
+		
 	</dependencies>
 
 	<build>

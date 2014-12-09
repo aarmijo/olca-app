@@ -1,5 +1,6 @@
 package org.openlca.app.rcp;
 
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
 import org.eclipse.swt.widgets.Display;
@@ -10,10 +11,11 @@ import org.tecnalia.proseco.app.Connector;
 public class RcpApplication implements IApplication {
 
 	@Override
-	public Object start(final IApplicationContext context) throws Exception {
+	public Object start(final IApplicationContext context) throws Exception {		
 		
-		//Connector.init();
-		
+		Connector.init();		
+		return null;
+		/*
 		Object result = null;
 		Display display = PlatformUI.createDisplay();
 		try {
@@ -27,11 +29,12 @@ public class RcpApplication implements IApplication {
 		} finally {
 			display.dispose();
 		}
-		return result;
+		return result;*/
 	}
 
 	@Override
 	public void stop() {
+		/*
 		final IWorkbench workbench = PlatformUI.getWorkbench();
 		if (workbench == null) {
 			return;
@@ -44,6 +47,6 @@ public class RcpApplication implements IApplication {
 					workbench.close();
 				}
 			}
-		});
+		});*/
 	}
 }

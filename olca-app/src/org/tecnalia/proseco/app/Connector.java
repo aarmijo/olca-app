@@ -1,40 +1,64 @@
 package org.tecnalia.proseco.app;
 
-import java.util.List;
+import java.io.InputStream;
+import java.util.Map;
+import java.util.Properties;
 
-import org.openlca.app.App;
-import org.openlca.app.db.Cache;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.eclipse.core.runtime.Platform;
 import org.openlca.app.db.Database;
 import org.openlca.app.db.DatabaseList;
-import org.openlca.core.database.ProductSystemDao;
 import org.openlca.core.database.derby.DerbyDatabase;
-import org.openlca.core.math.CalculationSetup;
-import org.openlca.core.math.SystemCalculator;
-import org.openlca.core.model.ProductSystem;
-import org.openlca.core.results.ContributionResult;
+import org.tecnalia.proseco.app.vcn.services.integration.CMISConnector;
 
 public class Connector {
 	
+	// Logger
+	private static Logger logger = Logger.getLogger(Connector.class.getName());
+	static String properties_file = "Connector.properties";
+	static Properties prop;
+	static String hydraulicEnergyFolderId = "hidraulic_energy_folder_id";
+	static String windEnergyFolderId = "wind_energy_folder_id";
+	static String windVsHydraulicFolderId = "wind_vs_hydraulic_folder_id";
+	
 	public static void init () throws Exception {
-		DatabaseList dbList = Database.getConfigurations();
 		
-		DerbyDatabase db = (DerbyDatabase) Database.activate(dbList.getLocalDatabases().get(0));
+		// Get the argument that represents the energy generated
+		String energyValueString = Platform.getApplicationArgs()[1];
+		Double d = Double.parseDouble(energyValueString);
+		long energyValueLong = Math.round(d);
+		int energyValueInt = (int) energyValueLong;		
 		
-		ProductSystemDao productSystem = new ProductSystemDao(db);
+		// Set logger level.
+		logger.setLevel(Level.INFO);
+
+		// Read properties from Connector.properties file
+		prop = new Properties();
+		// load properties file
+		InputStream input = Connector.class.getResourceAsStream(properties_file);
+		// load a properties file
+		prop.load(input);
+
+		DatabaseList dbList = Database.getConfigurations();		
+		DerbyDatabase db = (DerbyDatabase) Database.activate(dbList.getLocalDatabases().get(1));
 		
-		List<ProductSystem> productSystemList = productSystem.getAll();
+		CMISConnector.startSession();
 		
-		CalculationSetup setUp = new CalculationSetup(productSystemList.get(0), CalculationSetup.QUICK_RESULT);
-		//setUp.setAllocationMethod(allocationViewer.getSelected());
-		//setUp.setImpactMethod(methodViewer.getSelected());
-		//NwSetDescriptor set = nwViewer.getSelected();
-		//setUp.setNwSet(set);
-		//setUp.setNumberOfRuns(iterationCount);
-		//setUp.getParameterRedefs().addAll(productSystem.getParameterRedefs());
+		// Hydraulic energy
+		ProductSystemReporter.saveAnalysisReport(db, 0, energyValueInt, prop.getProperty(hydraulicEnergyFolderId));
 		
-		SystemCalculator calculator = new SystemCalculator(Cache.getMatrixCache(), App.getSolver());
+		// Wind vs. Hydraulic Energy Comparison Chart (Normalized)
+		ProductSystemReporter.saveNormalizedImpactsAsPng(db, 0, 1, energyValueInt, prop.getProperty(windVsHydraulicFolderId));
 		
-		ContributionResult result = calculator.calculateContributions(setUp);	
+		// Wind vs. Hydraulic Energy Comparison Chart (Characterization)
+		ProductSystemReporter.saveImpactsAsPng(db, 0, 1, energyValueInt, prop.getProperty(windVsHydraulicFolderId));
+		
+		// Wind energy
+		ProductSystemReporter.saveAnalysisReport(db, 1, energyValueInt, prop.getProperty(windEnergyFolderId));
+				
+		// Wind vs. Hydraulic Energy report
+		ProjectReporter.saveComparisonReport(db, 0, energyValueInt, prop.getProperty(windVsHydraulicFolderId));		
 		
 		System.out.println();
 	}
