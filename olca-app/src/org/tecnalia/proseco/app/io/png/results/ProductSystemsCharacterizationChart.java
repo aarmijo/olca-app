@@ -5,7 +5,6 @@ import java.awt.GradientPaint;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.NumberFormat;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -23,23 +22,19 @@ import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.openlca.core.model.ProductSystem;
 import org.openlca.core.model.descriptors.ImpactCategoryDescriptor;
-import org.openlca.core.results.ContributionItem;
-import org.openlca.core.results.ImpactResult;
 import org.openlca.core.results.SimpleResult;
 import org.openlca.core.results.SimpleResultProvider;
 import org.tecnalia.proseco.app.vcn.services.integration.CMISConnector;
 
-public class ProductSystemsImpactChart {
+public class ProductSystemsCharacterizationChart {
 
 	DefaultCategoryDataset chartDataset;
 	JFreeChart barChart;
 	
-	public ProductSystemsImpactChart(SimpleResultProvider<SimpleResult> simpleResultProvider1,
-			Set<ImpactCategoryDescriptor> impactCategoryDescriptors1,
-			SimpleResultProvider<SimpleResult> simpleResultProvider2,
-			Set<ImpactCategoryDescriptor> impactCategoryDescriptors2,
+	public ProductSystemsCharacterizationChart(SimpleResultProvider<SimpleResult> simpleResultProvider1, ProductSystem ps1,			
+			SimpleResultProvider<SimpleResult> simpleResultProvider2, ProductSystem ps2,
 			int targetAmount) {
-		createDataset(simpleResultProvider1, impactCategoryDescriptors1, simpleResultProvider2, impactCategoryDescriptors2);
+		createDataset(simpleResultProvider1, ps1, simpleResultProvider2, ps2);
 		this.barChart = createChart(chartDataset, targetAmount);	
 	}
 
@@ -55,7 +50,7 @@ public class ProductSystemsImpactChart {
         
         // create the chart...
         final JFreeChart chart = ChartFactory.createBarChart(
-            "Hydro vs. Wind Electricity Production: " + targetAmount + " kWh.",         // chart title
+            "Fossil vs. Wind Electricity Production: " + targetAmount + " kWh.",         // chart title
             "Impact Categories - ReCIPe Midpoint (E)",               // domain axis label
             "Value",                  // range axis label
             dataset,                  // data
@@ -121,12 +116,15 @@ public class ProductSystemsImpactChart {
      * 
      * @return The dataset.
      */
-    private void createDataset(SimpleResultProvider<SimpleResult> simpleResultProvider1, Set<ImpactCategoryDescriptor> impactCategoryDescriptors1, 
-    		SimpleResultProvider<SimpleResult> simpleResultProvider2, Set<ImpactCategoryDescriptor> impactCategoryDescriptors2) {
+    private void createDataset(SimpleResultProvider<SimpleResult> simpleResultProvider1, ProductSystem productSystem1, 
+    		SimpleResultProvider<SimpleResult> simpleResultProvider2, ProductSystem productSystem2) {
         
+		Set<ImpactCategoryDescriptor> impactCategoryDescriptors1 = simpleResultProvider1.getImpactDescriptors();
+		Set<ImpactCategoryDescriptor> impactCategoryDescriptors2 = simpleResultProvider2.getImpactDescriptors();
+    	
     	// row keys...
-        final String series1 = "Hydro electricity production";
-        final String series2 = "Wind electricity production";
+        final String series1 = productSystem1.getName();
+        final String series2 = productSystem2.getName();
 
         // column keys...
         final String category1 = "Marine ecotoxicity";
@@ -227,7 +225,7 @@ public class ProductSystemsImpactChart {
         this.chartDataset = dataset;        
     }
     
-	public void exportComparisonChartToVCN(String folderId) {		
+	public void exportComparisonChartToVCN(String folderId, Boolean normalization) {		
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		try {
 			ChartUtilities.writeChartAsPNG(baos, barChart, 1024, 768);
@@ -236,7 +234,7 @@ public class ProductSystemsImpactChart {
 		}
 		byte[] chart_content = baos.toByteArray();
 		
-		CMISConnector.saveComparisonChartAsPNG(chart_content, folderId);
+		CMISConnector.saveComparisonChartAsPNG(chart_content, folderId, normalization);
 	}
 	
 }

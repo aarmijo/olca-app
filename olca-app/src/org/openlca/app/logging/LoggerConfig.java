@@ -44,7 +44,10 @@ public class LoggerConfig {
 	}
 
 	private static void setLogLevel(Logger logger) {
+		// ProSEco development mode
+		// String level = Level.ALL.toString();
 		String level = CommandArgument.LOG_LEVEL.getValue();
+		
 		if (level != null) {
 			setLevelFromCommandLine(logger, level);
 		} else {

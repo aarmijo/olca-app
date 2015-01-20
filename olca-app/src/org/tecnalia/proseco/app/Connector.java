@@ -1,7 +1,6 @@
 package org.tecnalia.proseco.app;
 
 import java.io.InputStream;
-import java.util.Map;
 import java.util.Properties;
 
 import org.apache.log4j.Level;
@@ -18,9 +17,9 @@ public class Connector {
 	private static Logger logger = Logger.getLogger(Connector.class.getName());
 	static String properties_file = "Connector.properties";
 	static Properties prop;
-	static String hydraulicEnergyFolderId = "hidraulic_energy_folder_id";
+	static String fossilEnergyFolderId = "fossil_energy_folder_id";
 	static String windEnergyFolderId = "wind_energy_folder_id";
-	static String windVsHydraulicFolderId = "wind_vs_hydraulic_folder_id";
+	static String windVsFossilFolderId = "wind_vs_fossil_folder_id";
 	
 	public static void init () throws Exception {
 		
@@ -45,20 +44,20 @@ public class Connector {
 		
 		CMISConnector.startSession();
 		
-		// Hydraulic energy
-		ProductSystemReporter.saveAnalysisReport(db, 0, energyValueInt, prop.getProperty(hydraulicEnergyFolderId));
+		// Fossil energy
+		ProductSystemReporter.saveAnalysisReport(db, 2, energyValueInt, prop.getProperty(fossilEnergyFolderId));
 		
-		// Wind vs. Hydraulic Energy Comparison Chart (Normalized)
-		ProductSystemReporter.saveNormalizedImpactsAsPng(db, 0, 1, energyValueInt, prop.getProperty(windVsHydraulicFolderId));
+		// Wind vs. Fossil Energy Comparison Chart (Normalized)
+		ProductSystemReporter.saveNormalizedImpactsAsPng(db, 2, 1, energyValueInt, prop.getProperty(windVsFossilFolderId));
 		
-		// Wind vs. Hydraulic Energy Comparison Chart (Characterization)
-		ProductSystemReporter.saveImpactsAsPng(db, 0, 1, energyValueInt, prop.getProperty(windVsHydraulicFolderId));
+		// Wind vs. Fossil Energy Comparison Chart (Characterization)
+		ProductSystemReporter.saveCharacterizedImpactsAsPng(db, 2, 1, energyValueInt, prop.getProperty(windVsFossilFolderId));
 		
 		// Wind energy
 		ProductSystemReporter.saveAnalysisReport(db, 1, energyValueInt, prop.getProperty(windEnergyFolderId));
 				
-		// Wind vs. Hydraulic Energy report
-		ProjectReporter.saveComparisonReport(db, 0, energyValueInt, prop.getProperty(windVsHydraulicFolderId));		
+		// Wind vs. Fossil Energy report
+		ProjectReporter.saveComparisonReport(db, 1, energyValueInt, prop.getProperty(windVsFossilFolderId));		
 		
 		System.out.println();
 	}

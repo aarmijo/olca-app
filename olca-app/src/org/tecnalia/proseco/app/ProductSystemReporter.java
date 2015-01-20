@@ -1,10 +1,6 @@
 package org.tecnalia.proseco.app;
 
 import java.util.List;
-import java.util.Set;
-
-import org.jfree.data.category.CategoryDataset;
-import org.jfree.data.category.DefaultCategoryDataset;
 import org.openlca.app.App;
 import org.openlca.app.db.Cache;
 import org.openlca.core.database.ImpactMethodDao;
@@ -16,7 +12,6 @@ import org.openlca.core.math.SystemCalculator;
 import org.openlca.core.matrix.NwSetTable;
 import org.openlca.core.model.AllocationMethod;
 import org.openlca.core.model.ProductSystem;
-import org.openlca.core.model.descriptors.ImpactCategoryDescriptor;
 import org.openlca.core.model.descriptors.ImpactMethodDescriptor;
 import org.openlca.core.model.descriptors.NwSetDescriptor;
 import org.openlca.core.results.ContributionItem;
@@ -27,14 +22,13 @@ import org.openlca.core.results.FullResultProvider;
 import org.openlca.core.results.ImpactResult;
 import org.openlca.core.results.SimpleResult;
 import org.openlca.core.results.SimpleResultProvider;
-import org.tecnalia.proseco.app.io.png.results.ProductSystemsComparisonChart;
-import org.tecnalia.proseco.app.io.png.results.ProductSystemsImpactChart;
+import org.tecnalia.proseco.app.io.png.results.ProductSystemsNormalizationChart;
+import org.tecnalia.proseco.app.io.png.results.ProductSystemsCharacterizationChart;
 import org.tecnalia.proseco.app.io.xls.results.AnalysisResultExport;
 
 public class ProductSystemReporter {
 
 	public static void saveAnalysisReport(DerbyDatabase db, int productSystemId, int targetAmount, String folderId) {
-		// TODO Auto-generated method stub
 		
 		ProductSystemDao productSystem = new ProductSystemDao(db);		
 		List<ProductSystem> productSystemList = productSystem.getAll();		
@@ -188,14 +182,14 @@ public class ProductSystemReporter {
 		
 		List<ContributionItem<ImpactResult>> items2 = makeContributions(impactResults2);
 	
-		ProductSystemsComparisonChart comparisonChart = new ProductSystemsComparisonChart(ps1, items1, ps2, items2, targetAmount);
+		ProductSystemsNormalizationChart comparisonChart = new ProductSystemsNormalizationChart(ps1, items1, ps2, items2, targetAmount);
 		
-		comparisonChart.exportComparisonChartToVCN(folderId);	
+		comparisonChart.exportComparisonChartToVCN(folderId, true);	
 		
 		System.out.println();
 	}
 
-	public static void saveImpactsAsPng(DerbyDatabase db,
+	public static void saveCharacterizedImpactsAsPng(DerbyDatabase db,
 			int productSystem1Id, int productSystem2Id, int targetAmount,
 			String folderId) {
 		ProductSystemDao productSystem1 = new ProductSystemDao(db);		
@@ -246,12 +240,11 @@ public class ProductSystemReporter {
 		
 		SimpleResultProvider<SimpleResult> simpleResultProvider2 = new SimpleResultProvider<SimpleResult>(simpleResult2, Cache.getEntityCache());
 		
-		Set<ImpactCategoryDescriptor> impactCategoryDescriptors1 = simpleResultProvider1.getImpactDescriptors();
-		Set<ImpactCategoryDescriptor> impactCategoryDescriptors2 = simpleResultProvider2.getImpactDescriptors();
+		ProductSystemsCharacterizationChart comparisonChart = new ProductSystemsCharacterizationChart(simpleResultProvider1, ps1, simpleResultProvider2, ps2, targetAmount);
 		
-		ProductSystemsImpactChart comparisonChart = new ProductSystemsImpactChart(simpleResultProvider1, impactCategoryDescriptors1, simpleResultProvider2, impactCategoryDescriptors2, targetAmount);
+		comparisonChart.exportComparisonChartToVCN(folderId, false);
 		
-		comparisonChart.exportComparisonChartToVCN(folderId);		
+		System.out.println();
 	}
 
 }

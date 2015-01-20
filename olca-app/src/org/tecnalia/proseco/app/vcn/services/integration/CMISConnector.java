@@ -49,7 +49,7 @@ public class CMISConnector {
 	static String productComparisonExcelFileName = "product_comparison_excel_file_name";
 	static String productComparisonNormalizationChartFileName = "product_comparison_normalization_chart_file_name";
 	static String productComparisonCharacterizationChartFileName = "product_comparison_characterization_chart_file_name";
-	static String productComparisonChartFileName = "product_comparison_chart_file_name";	
+	//static String productComparisonChartFileName = "product_comparison_chart_file_name";	
 	
 	// Logger
 	private static Logger logger = Logger.getLogger(CMISConnector.class
@@ -191,7 +191,7 @@ public class CMISConnector {
 		}
 	}
 	
-	public static void saveComparisonChartAsPNG(byte[] chart_content, String folderId) {
+	public static void saveComparisonChartAsPNG(byte[] chart_content, String folderId, Boolean normalization) {
 		// get the LCA folder
 		Folder lcaFolder = (Folder) session.getObject(session.createObjectId(folderId));
 		
@@ -200,8 +200,13 @@ public class CMISConnector {
 		
 		// Set the name for the file
 		Date date = new Date();
-		Calendar calendar = Calendar.getInstance();		
-		String fileName = (String) prop.get(productComparisonChartFileName);
+		Calendar calendar = Calendar.getInstance();	
+		String fileName = null;
+		if (normalization == true) { 
+			fileName = (String) prop.get(productComparisonNormalizationChartFileName);
+		} else if (normalization == false) {
+			fileName = (String) prop.get(productComparisonCharacterizationChartFileName);
+		}
 		SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy_HH-mm-ss");
 		fileName = fileName + "_week_" + calendar.get(Calendar.WEEK_OF_YEAR) + "_" + dateFormat.format(date) + ".png";
 		properties.put(PropertyIds.NAME, fileName);

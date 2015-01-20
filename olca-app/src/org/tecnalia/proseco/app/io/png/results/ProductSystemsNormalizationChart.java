@@ -22,12 +22,12 @@ import org.openlca.core.results.ContributionItem;
 import org.openlca.core.results.ImpactResult;
 import org.tecnalia.proseco.app.vcn.services.integration.CMISConnector;
 
-public class ProductSystemsComparisonChart {
+public class ProductSystemsNormalizationChart {
 	
 	DefaultCategoryDataset chartDataset;
 	JFreeChart barChart;
 	
-	public ProductSystemsComparisonChart(ProductSystem productSystem1, List<ContributionItem<ImpactResult>> contributionItems1, 
+	public ProductSystemsNormalizationChart(ProductSystem productSystem1, List<ContributionItem<ImpactResult>> contributionItems1, 
     		ProductSystem productSystem2, List<ContributionItem<ImpactResult>> contributionItems2, int targetAmount) {
 		createDataset(productSystem1, contributionItems1, productSystem2, contributionItems2);
 		this.barChart = createChart(chartDataset, targetAmount);		
@@ -45,7 +45,7 @@ public class ProductSystemsComparisonChart {
         
         // create the chart...
         final JFreeChart chart = ChartFactory.createBarChart(
-            "Hydro vs. Wind Electricity Production: " + targetAmount + " kWh.",         // chart title
+            "Fossil vs. Wind Electricity Production: " + targetAmount + " kWh.",         // chart title
             "Impact Categories (Europe ReCIPe E)",               // domain axis label
             "Value",                  // range axis label
             dataset,                  // data
@@ -200,7 +200,7 @@ public class ProductSystemsComparisonChart {
         this.chartDataset = dataset;        
     }
 
-	public void exportComparisonChartToVCN(String folderId) {		
+	public void exportComparisonChartToVCN(String folderId, Boolean normalization) {		
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		try {
 			ChartUtilities.writeChartAsPNG(baos, barChart, 1024, 768);
@@ -209,6 +209,6 @@ public class ProductSystemsComparisonChart {
 		}
 		byte[] chart_content = baos.toByteArray();
 		
-		CMISConnector.saveComparisonChartAsPNG(chart_content, folderId);
+		CMISConnector.saveComparisonChartAsPNG(chart_content, folderId, normalization);
 	}
 }

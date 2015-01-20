@@ -1,6 +1,5 @@
 package org.tecnalia.proseco.app;
 
-import java.io.File;
 import java.util.List;
 
 import org.openlca.app.App;
@@ -15,11 +14,11 @@ import org.tecnalia.proseco.app.io.xls.results.ProjectResultExport;
 
 public class ProjectReporter {
 
-	public static void saveComparisonReport(DerbyDatabase db, int productSystemId, int targetAmount, String folderId) {
+	public static void saveComparisonReport(DerbyDatabase db, int projectId, int targetAmount, String folderId) {
 		// TODO Auto-generated method stub
 		ProjectDao projectDao = new ProjectDao(db);		
 		List<Project> projectList = projectDao.getAll();		
-		Project project = projectList.get(productSystemId);		
+		Project project = projectList.get(projectId);		
 		System.out.println("Project: " + project.getName());
 		
 		// Set the target amount in the project variants
