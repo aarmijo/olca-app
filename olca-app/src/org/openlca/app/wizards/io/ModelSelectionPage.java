@@ -8,8 +8,8 @@ import org.eclipse.jface.viewers.CheckboxTreeViewer;
 import org.eclipse.jface.viewers.ColumnViewerToolTipSupport;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -17,14 +17,17 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
-import org.openlca.app.ApplicationProperties;
 import org.openlca.app.Messages;
+import org.openlca.app.Preferences;
 import org.openlca.app.db.Database;
+import org.openlca.app.db.IDatabaseConfiguration;
 import org.openlca.app.navigation.NavigationContentProvider;
 import org.openlca.app.navigation.NavigationLabelProvider;
 import org.openlca.app.navigation.NavigationSorter;
 import org.openlca.app.navigation.Navigator;
+import org.openlca.app.navigation.filters.ModelTypeFilter;
 import org.openlca.app.util.Colors;
+import org.openlca.app.util.Controls;
 import org.openlca.app.util.UI;
 import org.openlca.app.util.UIFactory;
 import org.openlca.core.model.ModelType;
@@ -32,34 +35,46 @@ import org.openlca.core.model.descriptors.BaseDescriptor;
 
 class ModelSelectionPage extends WizardPage {
 
-	private final ModelType type;
-
+	private ModelType[] types;
 	private File exportDestination;
 	private List<BaseDescriptor> selectedComponents = new ArrayList<>();
 	private CheckboxTreeViewer viewer;
 
-	public ModelSelectionPage(ModelType type) {
+	public ModelSelectionPage(ModelType... types) {
 		super(ModelSelectionPage.class.getCanonicalName());
-		this.type = type;
+		this.types = types;
 		setPageComplete(false);
 		createTexts();
 	}
 
+	public File getExportDestination() {
+		return exportDestination;
+	}
+
+	public List<BaseDescriptor> getSelectedModels() {
+		return selectedComponents;
+	}
+
 	private void createTexts() {
-		String typeName = getTypeName(type);
-		String title = Messages.bind(Messages.SelectObjectPage_Title, typeName);
+		// TODO: change labels to 'Select data sets etc.'
+		String typeName = getTypeName();
+		String title = Messages.bind(Messages.Select, typeName);
 		setTitle(title);
 		String descr = Messages.SelectObjectPage_Description;
 		descr = Messages.bind(descr, typeName);
 		setDescription(descr);
 	}
 
-	private String getTypeName(ModelType type) {
+	// TODO: this method can be removed if the labels are a bit more generic
+	private String getTypeName() {
+		if (types == null || types.length != 1)
+			return "@data sets";
+		ModelType type = types[0];
 		switch (type) {
 		case PROCESS:
 			return Messages.Processes;
 		case IMPACT_METHOD:
-			return Messages.ImpactMethods;
+			return Messages.ImpactAssessmentMethods;
 		case FLOW:
 			return Messages.Flows;
 		case FLOW_PROPERTY:
@@ -82,101 +97,79 @@ class ModelSelectionPage extends WizardPage {
 				&& selectedComponents.size() > 0);
 	}
 
-	private void createChooseDirectoryComposite(final Composite body) {
-		// create composite
-		final Composite chooseDirectoryComposite = new Composite(body, SWT.NONE);
-		final GridLayout dirLayout = new GridLayout(3, false);
-		dirLayout.marginLeft = 0;
-		dirLayout.marginRight = 0;
-		dirLayout.marginBottom = 0;
-		dirLayout.marginTop = 0;
-		dirLayout.marginHeight = 0;
-		dirLayout.marginWidth = 0;
-		chooseDirectoryComposite.setLayout(dirLayout);
-		chooseDirectoryComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL,
-				true, false));
-
-		new Label(chooseDirectoryComposite, SWT.NONE)
-				.setText(Messages.ChooseDirectoryLabel);
-
-		// create text for selecting a category
-		final Text directoryText = new Text(chooseDirectoryComposite,
-				SWT.BORDER);
-		String lastDirectory = ApplicationProperties.PROP_EXPORT_DIRECTORY
-				.getValue();
-		if (lastDirectory != null && new File(lastDirectory).exists()) {
-			directoryText.setText(lastDirectory);
-			exportDestination = new File(lastDirectory);
-		} else {
-			lastDirectory = null;
-		}
-		directoryText.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true,
-				false));
-		directoryText.setEditable(false);
-		directoryText.setBackground(Colors.getWhite());
-
-		// create button to open directory dialog
-		final Button chooseDirectoryButton = new Button(
-				chooseDirectoryComposite, SWT.NONE);
-		chooseDirectoryButton.setText(Messages.ChooseDirectoryButton);
-		chooseDirectoryButton.addSelectionListener(new SelectionListener() {
-
-			@Override
-			public void widgetDefaultSelected(SelectionEvent e) {
-				widgetSelected(e);
-			}
-
-			@Override
-			public void widgetSelected(SelectionEvent e) {
-				DirectoryDialog dialog = new DirectoryDialog(UI.shell());
-				String dir = ApplicationProperties.PROP_EXPORT_DIRECTORY
-						.getValue();
-				dialog.setFilterPath(dir != null && new File(dir).exists() ? dir
-						: "");
-				String directoryPath = dialog.open();
-				if (directoryPath != null) {
-					directoryText.setText(directoryPath);
-					ApplicationProperties.PROP_EXPORT_DIRECTORY
-							.setValue(directoryPath);
-					exportDestination = new File(directoryPath);
-					checkCompletion();
-				}
-			}
-
-		});
-	}
-
 	@Override
 	public void createControl(final Composite parent) {
-		final Composite body = UIFactory.createContainer(parent);
-		final GridLayout bodyLayout = new GridLayout(1, true);
+		Composite body = UIFactory.createContainer(parent);
+		GridLayout bodyLayout = new GridLayout(1, true);
 		bodyLayout.marginHeight = 10;
 		bodyLayout.marginWidth = 10;
 		bodyLayout.verticalSpacing = 10;
 		body.setLayout(bodyLayout);
-
 		createChooseDirectoryComposite(body);
-
-		final Composite processComposite = new Composite(body, SWT.NONE);
-		final GridLayout processLayout = new GridLayout(2, false);
-		processLayout.marginLeft = 0;
-		processLayout.marginRight = 0;
-		processLayout.marginBottom = 0;
-		processLayout.marginTop = 0;
-		processLayout.marginHeight = 0;
-		processLayout.marginWidth = 0;
-		processComposite.setLayout(processLayout);
-		processComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true,
-				true));
-
-		createViewer(processComposite);
-
+		Composite viewerComposite = createViewerComposite(body);
+		createViewer(viewerComposite);
 		setControl(body);
 		checkCompletion();
 	}
 
-	private void createViewer(Composite processComposite) {
-		viewer = new CheckboxTreeViewer(processComposite, SWT.VIRTUAL
+	private void createChooseDirectoryComposite(final Composite body) {
+		Composite composite = new Composite(body, SWT.NONE);
+		GridLayout layout = UI.gridLayout(composite, 3);
+		layout.marginHeight = 0;
+		layout.marginWidth = 5;
+		UI.gridData(composite, true, false);
+		new Label(composite, SWT.NONE).setText(Messages.ToDirectory);
+		Text text = createDirectoryText(composite);
+		text.setEditable(false);
+		text.setBackground(Colors.getWhite());
+		Button button = new Button(composite, SWT.NONE);
+		button.setText(Messages.Browse);
+		Controls.onSelect(button, (e) -> selectDirectory(text));
+	}
+
+	private Text createDirectoryText(Composite composite) {
+		Text text = new Text(composite, SWT.BORDER);
+		String lastDir = Preferences.get(Preferences.LAST_EXPORT_FOLDER);
+		if (lastDir != null && new File(lastDir).exists()) {
+			text.setText(lastDir);
+			exportDestination = new File(lastDir);
+		} else {
+			lastDir = null;
+		}
+		UI.gridData(text, true, false);
+		return text;
+	}
+
+	private void selectDirectory(Text text) {
+		DirectoryDialog dialog = new DirectoryDialog(UI.shell());
+		String dir = Preferences.get(Preferences.LAST_EXPORT_FOLDER);
+		if (dir != null && new File(dir).exists())
+			dialog.setFilterPath(dir);
+		String path = dialog.open();
+		if (path != null) {
+			text.setText(path);
+			Preferences.set(Preferences.LAST_EXPORT_FOLDER, path);
+			exportDestination = new File(path);
+			checkCompletion();
+		}
+	}
+
+	private Composite createViewerComposite(final Composite body) {
+		Composite composite = new Composite(body, SWT.NONE);
+		GridLayout layout = new GridLayout(2, false);
+		layout.marginLeft = 0;
+		layout.marginRight = 0;
+		layout.marginBottom = 0;
+		layout.marginTop = 0;
+		layout.marginHeight = 0;
+		layout.marginWidth = 0;
+		composite.setLayout(layout);
+		composite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+		return composite;
+	}
+
+	private void createViewer(Composite composite) {
+		viewer = new CheckboxTreeViewer(composite, SWT.VIRTUAL
 				| SWT.MULTI | SWT.BORDER);
 		viewer.setUseHashlookup(true);
 		viewer.getTree().setLayoutData(
@@ -184,22 +177,38 @@ class ModelSelectionPage extends WizardPage {
 		viewer.setContentProvider(new NavigationContentProvider());
 		viewer.setLabelProvider(new NavigationLabelProvider());
 		viewer.setSorter(new NavigationSorter());
+		viewer.addFilter(new ModelTypeFilter(types));
 		viewer.addCheckStateListener(new ModelSelectionState(this, viewer));
-		if (type != null)
-			viewer.setInput(Navigator.findElement(type));
-		else
-			viewer.setInput(Navigator.findElement(Database
-					.getActiveConfiguration()));
-
+		registerInputHandler(composite);
 		ColumnViewerToolTipSupport.enableFor(viewer);
 	}
 
-	public File getExportDestination() {
-		return new File(exportDestination.getAbsolutePath());
+	// We want to avoid a resizing of the import dialog when the user flips to
+	// this page. Thus, we set the input of the tree viewer after receiving the
+	// first paint event.
+	private void registerInputHandler(Composite composite) {
+		composite.addPaintListener(new PaintListener() {
+			private boolean init = false;
+
+			@Override
+			public void paintControl(PaintEvent e) {
+				if (init) {
+					composite.removePaintListener(this);
+					return;
+				}
+				init = true;
+				setInitialInput();
+			}
+		});
 	}
 
-	public List<BaseDescriptor> getSelectedModels() {
-		return selectedComponents;
+	private void setInitialInput() {
+		if (types != null && types.length == 1)
+			viewer.setInput(Navigator.findElement(types[0]));
+		else {
+			IDatabaseConfiguration config = Database.getActiveConfiguration();
+			viewer.setInput(Navigator.findElement(config));
+		}
 	}
 
 }

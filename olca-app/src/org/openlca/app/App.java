@@ -1,15 +1,17 @@
 package org.openlca.app;
 
 import java.io.File;
-import java.net.URL;
+import java.lang.reflect.InvocationTargetException;
 
-import org.eclipse.core.runtime.Platform;
-import org.eclipse.osgi.service.datalocation.Location;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.ui.IEditorReference;
 import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.progress.IProgressService;
 import org.openlca.app.editors.ModelEditorInput;
 import org.openlca.app.preferencepages.FeatureFlag;
 import org.openlca.app.rcp.RcpActivator;
+import org.openlca.app.rcp.Workspace;
 import org.openlca.app.util.Editors;
 import org.openlca.core.math.IMatrixSolver;
 import org.openlca.core.math.JavaSolver;
@@ -75,28 +77,6 @@ public class App {
 		return val.equals("true");
 	}
 
-	/**
-	 * Returns the absolute path to the installed XUL-Runner. Returns null if no
-	 * XUL runner installation could be found.
-	 */
-	public static String getXulRunnerPath() {
-		Location location = Platform.getInstallLocation();
-		if (location == null)
-			return null;
-		try {
-			URL url = location.getURL();
-			File installDir = new File(url.getFile());
-			File xulRunnerDir = new File(installDir, "xulrunner");
-			log.trace("search for XULRunner at {}", xulRunnerDir);
-			if (xulRunnerDir.exists())
-				return xulRunnerDir.getAbsolutePath();
-			return null;
-		} catch (Exception e) {
-			log.error("Error while searching for XUL-Runner", e);
-			return null;
-		}
-	}
-
 	public static EventBus getEventBus() {
 		return eventBus;
 	}
@@ -119,6 +99,11 @@ public class App {
 			ModelEditorInput input = new ModelEditorInput(modelDescriptor);
 			Editors.open(input, editorId);
 		}
+	}
+
+	public static void closeEditor(CategorizedEntity entity) {
+		BaseDescriptor descriptor = Descriptors.toDescriptor(entity);
+		closeEditor(descriptor);
 	}
 
 	public static void closeEditor(BaseDescriptor descriptor) {
@@ -171,9 +156,23 @@ public class App {
 		job.schedule();
 	}
 
+	public static void runWithProgress(String name, Runnable runnable) {
+		IProgressService progress = PlatformUI.getWorkbench()
+				.getProgressService();
+		try {
+			progress.run(true, false, (monitor) -> {
+				monitor.beginTask(name, IProgressMonitor.UNKNOWN);
+				runnable.run();
+				monitor.done();
+			});
+		} catch (InvocationTargetException | InterruptedException e) {
+			log.error("Error while running progress " + name, e);
+		}
+	}
+
 	/**
-	 * Returns the workspace directory where databases and other resources
-	 * are stored (native libraries, HTML resources, etc.).
+	 * Returns the workspace directory where databases and other resources are
+	 * stored (native libraries, HTML resources, etc.).
 	 */
 	public static File getWorkspace() {
 		return Workspace.getDir();

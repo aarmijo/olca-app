@@ -1,5 +1,8 @@
 package org.openlca.app.editors.systems;
 
+import gnu.trove.list.linked.TLongLinkedList;
+import gnu.trove.set.hash.TLongHashSet;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -13,13 +16,13 @@ import org.eclipse.ui.forms.editor.FormPage;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.openlca.app.db.Cache;
-import org.openlca.app.html.HtmlPage;
-import org.openlca.app.html.HtmlView;
-import org.openlca.app.html.IHtmlResource;
+import org.openlca.app.rcp.html.HtmlPage;
+import org.openlca.app.rcp.html.HtmlView;
 import org.openlca.app.util.Labels;
 import org.openlca.app.util.UI;
 import org.openlca.core.database.EntityCache;
 import org.openlca.core.matrix.LongIndex;
+import org.openlca.core.matrix.ProcessLinkSearchMap;
 import org.openlca.core.model.ProcessLink;
 import org.openlca.core.model.ProductSystem;
 import org.openlca.core.model.descriptors.ProcessDescriptor;
@@ -41,8 +44,8 @@ class HtmlGraph extends FormPage implements HtmlPage {
 	}
 
 	@Override
-	public IHtmlResource getResource() {
-		return HtmlView.GRAPH_VIEW.getResource();
+	public String getUrl() {
+		return HtmlView.GRAPH_VIEW.getUrl();
 	}
 
 	@Override
@@ -67,24 +70,44 @@ class HtmlGraph extends FormPage implements HtmlPage {
 	}
 
 	private Graph buildGraph() {
-		LongIndex nodeIndex = new LongIndex();
 		Graph graph = new Graph();
+		LongIndex nodeIndex = createNodes(graph);
+		ProcessLinkSearchMap map = new ProcessLinkSearchMap(
+				productSystem.getProcessLinks());
+		long startId = productSystem.getReferenceProcess().getId();
+		TLongLinkedList queue = new TLongLinkedList();
+		queue.add(startId);
+		TLongHashSet handled = new TLongHashSet();
+		while (!queue.isEmpty()) {
+			long recipient = queue.removeAt(0);
+			handled.add(recipient);
+			int recipId = nodeIndex.getIndex(recipient);
+			for (ProcessLink link : map.getIncomingLinks(recipient)) {
+				long provider = link.getProviderId();
+				if (handled.contains(provider) || queue.contains(provider))
+					continue;
+				queue.add(provider);
+				int provId = nodeIndex.getIndex(provider);
+				Link lnk = new Link();
+				lnk.source = provId;
+				lnk.target = recipId;
+				graph.links.add(lnk);
+			}
+		}
+		return graph;
+	}
+
+	private LongIndex createNodes(Graph graph) {
+		LongIndex idx = new LongIndex();
 		EntityCache cache = Cache.getEntityCache();
 		Map<Long, ProcessDescriptor> descriptors = cache.getAll(
 				ProcessDescriptor.class, productSystem.getProcesses());
 		for (Long processId : productSystem.getProcesses()) {
 			Node node = createNode(processId, descriptors);
 			graph.nodes.add(node);
-			nodeIndex.put(processId);
+			idx.put(processId);
 		}
-		for (ProcessLink processLink : productSystem.getProcessLinks()) {
-			Link link = new Link();
-			link.source = nodeIndex.getIndex(processLink.getProviderId());
-			link.target = nodeIndex.getIndex(processLink.getRecipientId());
-			if (link.source >= 0 && link.target >= 0)
-				graph.links.add(link);
-		}
-		return graph;
+		return idx;
 	}
 
 	private Node createNode(Long processId,

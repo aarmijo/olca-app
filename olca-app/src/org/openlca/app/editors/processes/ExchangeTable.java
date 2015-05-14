@@ -12,10 +12,9 @@ import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerFilter;
-import org.eclipse.swt.events.MouseAdapter;
-import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.ui.forms.widgets.FormToolkit;
 import org.eclipse.ui.forms.widgets.Section;
 import org.openlca.app.App;
@@ -24,11 +23,11 @@ import org.openlca.app.components.ModelSelectionDialog;
 import org.openlca.app.components.UncertaintyCellEditor;
 import org.openlca.app.db.Cache;
 import org.openlca.app.db.Database;
-import org.openlca.app.editors.ParameterPageListener;
-import org.openlca.app.resources.ImageType;
+import org.openlca.app.rcp.ImageType;
 import org.openlca.app.util.Actions;
 import org.openlca.app.util.Error;
 import org.openlca.app.util.Labels;
+import org.openlca.app.util.TableClipboard;
 import org.openlca.app.util.Tables;
 import org.openlca.app.util.UI;
 import org.openlca.app.util.UncertaintyLabel;
@@ -51,8 +50,6 @@ import org.openlca.core.model.descriptors.BaseDescriptor;
 import org.openlca.core.model.descriptors.FlowDescriptor;
 import org.openlca.core.model.descriptors.ProcessDescriptor;
 import org.openlca.io.CategoryPath;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The table for the display and editing of inputs or outputs of process
@@ -60,9 +57,7 @@ import org.slf4j.LoggerFactory;
  * this table.
  * 
  */
-class ExchangeTable implements ParameterPageListener {
-
-	private Logger log = LoggerFactory.getLogger(getClass());
+class ExchangeTable {
 
 	private final boolean forInputs;
 	private boolean showFormulas = true;
@@ -99,13 +94,7 @@ class ExchangeTable implements ParameterPageListener {
 	private ExchangeTable(boolean forInputs, ProcessEditor editor) {
 		this.forInputs = forInputs;
 		this.editor = editor;
-		editor.getParameterSupport().addListener(this);
-	}
-
-	@Override
-	public void parameterChanged() {
-		log.trace("refresh exchange tables after parameter change");
-		viewer.refresh();
+		editor.getParameterSupport().afterEvaluation(() -> viewer.refresh());
 	}
 
 	private void render(Section section, FormToolkit toolkit) {
@@ -144,38 +133,23 @@ class ExchangeTable implements ParameterPageListener {
 	private void bindActions(Section section, final TableViewer viewer) {
 		Action add = Actions.onAdd(() -> onAdd());
 		Action remove = Actions.onRemove(() -> onRemove());
-		Action formulaSwitch = new Action() {
-			{
-				setImageDescriptor(ImageType.NUMBER_ICON.getDescriptor());
-				setText(Messages.ShowValues);
-			}
-
-			@Override
-			public void run() {
-				showFormulas = !showFormulas;
-				if (showFormulas) {
-					setImageDescriptor(ImageType.NUMBER_ICON.getDescriptor());
-					setText(Messages.ShowValues);
-				} else {
-					setImageDescriptor(ImageType.FORMULA_ICON.getDescriptor());
-					setText(Messages.ShowFormulas);
-				}
-				viewer.refresh();
-			}
-		};
+		Action formulaSwitch = new FormulaSwitchAction();
+		Action clipboard = TableClipboard.onCopy(viewer);
 		Actions.bind(section, add, remove, formulaSwitch);
-		Actions.bind(viewer, add, remove);
+		Actions.bind(viewer, add, remove, clipboard);
+		Tables.onDeletePressed(viewer, (e) -> onRemove());
 	}
 
 	private void bindDoubleClick(final TableViewer viewer) {
-		viewer.getTable().addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseDoubleClick(MouseEvent e) {
-				Exchange exchange = Viewers.getFirstSelected(viewer);
-				if (exchange == null || exchange.getFlow() == null)
-					return;
-				App.openEditor(exchange.getFlow());
+		Tables.onDoubleClick(viewer, (e) -> {
+			TableItem item = Tables.getItem(viewer, e);
+			if (item == null) {
+				onAdd();
+				return;
 			}
+			Exchange exchange = Viewers.getFirstSelected(viewer);
+			if (exchange != null && exchange.getFlow() != null)
+				App.openEditor(exchange.getFlow());
 		});
 	}
 
@@ -198,14 +172,11 @@ class ExchangeTable implements ParameterPageListener {
 	private void onRemove() {
 		Process process = editor.getModel();
 		List<Exchange> selection = Viewers.getAllSelected(viewer);
-		if (selection.contains(process.getQuantitativeReference())) {
-			Error.showBox("Cannot delete reference flow",
-					"You cannot delete the reference flow of a process");
+		if (!Exchanges.canRemove(process, selection))
 			return;
-		}
 		selection.forEach((e) -> process.getExchanges().remove(e));
 		viewer.setInput(process.getExchanges());
-		fireChange();
+		editor.setDirty(true);
 		editor.postEvent(editor.EXCHANGES_CHANGED, this);
 	}
 
@@ -228,12 +199,8 @@ class ExchangeTable implements ParameterPageListener {
 			process.getExchanges().add(exchange);
 		}
 		viewer.setInput(process.getExchanges());
-		fireChange();
-		editor.postEvent(editor.EXCHANGES_CHANGED, this);
-	}
-
-	private void fireChange() {
 		editor.setDirty(true);
+		editor.postEvent(editor.EXCHANGES_CHANGED, this);
 	}
 
 	private class ExchangeLabelProvider extends LabelProvider implements
@@ -354,7 +321,7 @@ class ExchangeTable implements ParameterPageListener {
 		protected void setItem(Exchange element, FlowPropertyFactor item) {
 			if (!Objects.equals(element.getFlowPropertyFactor(), item)) {
 				element.setFlowPropertyFactor(item);
-				fireChange();
+				editor.setDirty(true);
 			}
 		}
 
@@ -383,7 +350,7 @@ class ExchangeTable implements ParameterPageListener {
 		protected void setItem(Exchange element, Unit item) {
 			if (!Objects.equals(element.getUnit(), item)) {
 				element.setUnit(item);
-				fireChange();
+				editor.setDirty(true);
 			}
 		}
 	}
@@ -403,16 +370,15 @@ class ExchangeTable implements ParameterPageListener {
 				double value = Double.parseDouble(text);
 				exchange.setAmountFormula(null);
 				exchange.setAmountValue(value);
-				fireChange();
+				editor.setDirty(true);
 			} catch (NumberFormatException e) {
 				try {
-					double val = editor.getParameterSupport().eval(text);
 					exchange.setAmountFormula(text);
-					exchange.setAmountValue(val);
-					fireChange();
+					editor.setDirty(true);
+					editor.getParameterSupport().evaluate();
 				} catch (Exception ex) {
-					Error.showBox("Invalid formula", text
-							+ " is an invalid formula");
+					Error.showBox(Messages.InvalidFormula, text + " "
+							+ Messages.IsInvalidFormula);
 				}
 			}
 		}
@@ -456,7 +422,7 @@ class ExchangeTable implements ParameterPageListener {
 		@Override
 		protected String getText(ProcessDescriptor value) {
 			if (value == null)
-				return "-none-";
+				return Messages.None;
 			return Labels.getDisplayName(value);
 		}
 
@@ -466,7 +432,7 @@ class ExchangeTable implements ParameterPageListener {
 				element.setDefaultProviderId(0);
 			else
 				element.setDefaultProviderId(item.getId());
-			fireChange();
+			editor.setDirty(true);
 		}
 	}
 
@@ -494,7 +460,7 @@ class ExchangeTable implements ParameterPageListener {
 				return;
 			element.setAvoidedProduct(value);
 			element.setInput(value);
-			fireChange();
+			editor.setDirty(true);
 		}
 	}
 
@@ -509,6 +475,27 @@ class ExchangeTable implements ParameterPageListener {
 				return !forInputs;
 			else
 				return exchange.isInput() == forInputs;
+		}
+	}
+
+	private class FormulaSwitchAction extends Action {
+
+		public FormulaSwitchAction() {
+			setImageDescriptor(ImageType.NUMBER_ICON.getDescriptor());
+			setText(Messages.ShowValues);
+		}
+
+		@Override
+		public void run() {
+			showFormulas = !showFormulas;
+			if (showFormulas) {
+				setImageDescriptor(ImageType.NUMBER_ICON.getDescriptor());
+				setText(Messages.ShowValues);
+			} else {
+				setImageDescriptor(ImageType.FORMULA_ICON.getDescriptor());
+				setText(Messages.ShowFormulas);
+			}
+			viewer.refresh();
 		}
 	}
 

@@ -8,7 +8,6 @@ import org.openlca.app.App;
 import org.openlca.app.Messages;
 import org.openlca.app.db.Cache;
 import org.openlca.app.db.Database;
-import org.openlca.app.preferencepages.FeatureFlag;
 import org.openlca.core.database.BaseDao;
 import org.openlca.core.database.IProductSystemBuilder;
 import org.openlca.core.matrix.cache.MatrixCache;
@@ -54,8 +53,6 @@ public class ProductSystemWizard extends AbstractWizard<ProductSystem> {
 			}
 			boolean preferSystems = page.useSystemProcesses();
 			Runner runner = new Runner(system, preferSystems);
-			if (FeatureFlag.PRODUCT_SYSTEM_CUTOFF.isEnabled())
-				runner.setCutoff(page.getCutoff());
 			getContainer().run(true, true, runner);
 			system = runner.system;
 			Cache.registerNew(Descriptors.toDescriptor(system));
@@ -88,7 +85,7 @@ public class ProductSystemWizard extends AbstractWizard<ProductSystem> {
 		public void run(IProgressMonitor monitor)
 				throws InvocationTargetException, InterruptedException {
 			try {
-				monitor.beginTask(Messages.Systems_CreatingProductSystem,
+				monitor.beginTask(Messages.CreatingProductSystem,
 						IProgressMonitor.UNKNOWN);
 				IProductSystemBuilder builder = null;
 				if (cutoff == null)
@@ -107,7 +104,7 @@ public class ProductSystemWizard extends AbstractWizard<ProductSystem> {
 
 	@Override
 	protected String getTitle() {
-		return Messages.Systems_WizardTitle;
+		return Messages.NewProductSystem;
 	}
 
 	@Override

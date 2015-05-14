@@ -26,7 +26,7 @@ import org.openlca.app.components.ContributionImage;
 import org.openlca.app.components.FlowImpactSelection;
 import org.openlca.app.components.FlowImpactSelection.EventHandler;
 import org.openlca.app.db.Cache;
-import org.openlca.app.resources.ImageType;
+import org.openlca.app.rcp.ImageType;
 import org.openlca.app.util.Labels;
 import org.openlca.app.util.Numbers;
 import org.openlca.app.util.UI;
@@ -45,14 +45,15 @@ public class ContributionTreePage extends FormPage {
 
 	private EntityCache cache = Cache.getEntityCache();
 	private FullResultProvider result;
-	private TreeViewer contributionTree;
+	private TreeViewer tree;
 	private Object selection;
 
 	private static final String[] HEADERS = { Messages.Contribution,
 			Messages.Process, Messages.Amount, Messages.Unit };
 
 	public ContributionTreePage(AnalyzeEditor editor, FullResultProvider result) {
-		super(editor, "analysis.ContributionTreePage", "Contribution tree");
+		super(editor, "analysis.ContributionTreePage",
+				Messages.ContributionTree);
 		this.result = result;
 		Iterator<FlowDescriptor> it = result.getFlowDescriptors().iterator();
 		if (it.hasNext())
@@ -62,7 +63,8 @@ public class ContributionTreePage extends FormPage {
 	@Override
 	protected void createFormContent(IManagedForm managedForm) {
 		FormToolkit toolkit = managedForm.getToolkit();
-		ScrolledForm form = UI.formHeader(managedForm, "Contribution tree");
+		ScrolledForm form = UI.formHeader(managedForm,
+				Messages.ContributionTree);
 		Composite body = UI.formBody(form, toolkit);
 		Composite composite = toolkit.createComposite(body);
 		UI.gridLayout(composite, 2);
@@ -75,33 +77,37 @@ public class ContributionTreePage extends FormPage {
 		UI.gridData(treeContainer, true, true);
 		createTree(toolkit, treeContainer);
 		form.reflow(true);
-		for (TreeColumn column : contributionTree.getTree().getColumns())
+		for (TreeColumn column : tree.getTree().getColumns())
 			column.pack();
 		selector.selectWithEvent(selection);
 	}
 
 	private void createTree(FormToolkit toolkit, Composite treeContainer) {
-		contributionTree = new TreeViewer(treeContainer, SWT.FULL_SELECTION
-				| SWT.SINGLE | SWT.BORDER);
-		contributionTree.setAutoExpandLevel(2);
-		contributionTree.getTree().setLinesVisible(false);
-		contributionTree.getTree().setHeaderVisible(true);
+		tree = new TreeViewer(treeContainer, SWT.FULL_SELECTION
+				| SWT.MULTI | SWT.BORDER);
+		tree.setAutoExpandLevel(2);
+		tree.getTree().setLinesVisible(false);
+		tree.getTree().setHeaderVisible(true);
 		for (int i = 0; i < HEADERS.length; i++) {
-			TreeColumn c = new TreeColumn(contributionTree.getTree(), SWT.NULL);
+			TreeColumn c = new TreeColumn(tree.getTree(), SWT.NULL);
 			c.setText(HEADERS[i]);
 		}
-		contributionTree.setColumnProperties(HEADERS);
-		contributionTree.setContentProvider(new ContributionContentProvider());
-		contributionTree.setLabelProvider(new ContributionLabelProvider());
-		contributionTree.setSorter(new ContributionSorter());
-		UI.gridData(contributionTree.getTree(), true, true);
-		toolkit.adapt(contributionTree.getTree(), false, false);
-		toolkit.paintBordersFor(contributionTree.getTree());
-		MenuManager menuManager = new MenuManager();
-		menuManager.add(new OpenEditorAction());
-		Menu menu = menuManager
-				.createContextMenu(contributionTree.getControl());
-		contributionTree.getControl().setMenu(menu);
+		tree.setColumnProperties(HEADERS);
+		tree.setContentProvider(new ContributionContentProvider());
+		tree.setLabelProvider(new ContributionLabelProvider());
+		tree.setSorter(new ContributionSorter());
+		UI.gridData(tree.getTree(), true, true);
+		toolkit.adapt(tree.getTree(), false, false);
+		toolkit.paintBordersFor(tree.getTree());
+		createMenu();
+	}
+
+	private void createMenu() {
+		MenuManager manager = new MenuManager();
+		manager.add(new OpenEditorAction());
+		manager.add(TreeClipboard.onCopy(tree));
+		Menu menu = manager.createContextMenu(tree.getControl());
+		tree.getControl().setMenu(menu);
 	}
 
 	private class SelectionHandler implements EventHandler {
@@ -109,26 +115,27 @@ public class ContributionTreePage extends FormPage {
 		@Override
 		public void flowSelected(FlowDescriptor flow) {
 			selection = flow;
-			UpstreamTree tree = result.getTree(flow);
-			contributionTree.setInput(tree);
+			UpstreamTree model = result.getTree(flow);
+			tree.setInput(model);
 		}
 
 		@Override
 		public void impactCategorySelected(
 				ImpactCategoryDescriptor impactCategory) {
 			selection = impactCategory;
-			UpstreamTree tree = result.getTree(impactCategory);
-			contributionTree.setInput(tree);
+			UpstreamTree model = result.getTree(impactCategory);
+			tree.setInput(model);
 		}
 	}
 
 	private class ContributionContentProvider implements ITreeContentProvider {
 
 		@Override
-		public Object[] getChildren(Object parentElement) {
-			if (!(parentElement instanceof UpstreamTreeNode))
+		public Object[] getChildren(Object parent) {
+			if (!(parent instanceof UpstreamTreeNode))
 				return null;
-			return ((UpstreamTreeNode) parentElement).getChildren().toArray();
+			UpstreamTreeNode node = (UpstreamTreeNode) parent;
+			return node.getChildren().toArray();
 		}
 
 		@Override
@@ -147,11 +154,12 @@ public class ContributionTreePage extends FormPage {
 		public boolean hasChildren(Object element) {
 			if (!(element instanceof UpstreamTreeNode))
 				return false;
-			return !((UpstreamTreeNode) element).getChildren().isEmpty();
+			UpstreamTreeNode node = (UpstreamTreeNode) element;
+			return !node.getChildren().isEmpty();
 		}
 
 		@Override
-		public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+		public void inputChanged(Viewer viewer, Object old, Object newInput) {
 		}
 
 		@Override
@@ -215,7 +223,7 @@ public class ContributionTreePage extends FormPage {
 		}
 
 		private double getTotalAmount() {
-			return ((UpstreamTree) contributionTree.getInput()).getRoot()
+			return ((UpstreamTree) tree.getInput()).getRoot()
 					.getAmount();
 		}
 
@@ -223,12 +231,10 @@ public class ContributionTreePage extends FormPage {
 			double singleResult = getSingleAmount(node);
 			if (singleResult == 0)
 				return 0;
-			double referenceResult = getTotalAmount();
+			double referenceResult = Math.abs(getTotalAmount());
 			if (referenceResult == 0)
 				return 0;
 			double contribution = singleResult / referenceResult;
-			if (contribution > 1)
-				return 1;
 			return contribution;
 		}
 
@@ -260,7 +266,7 @@ public class ContributionTreePage extends FormPage {
 
 		@Override
 		public void run() {
-			Object selection = Viewers.getFirstSelected(contributionTree);
+			Object selection = Viewers.getFirstSelected(tree);
 			if (!(selection instanceof UpstreamTreeNode))
 				return;
 			UpstreamTreeNode node = (UpstreamTreeNode) selection;

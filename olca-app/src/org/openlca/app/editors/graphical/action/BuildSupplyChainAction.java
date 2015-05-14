@@ -55,6 +55,7 @@ class BuildSupplyChainAction extends Action implements IBuildAction {
 			NodeLayoutStore.loadLayout(editor.getModel());
 			if (editor.getOutline() != null)
 				editor.getOutline().refresh();
+			editor.setDirty(true);
 		} catch (final Exception e) {
 			log.error("Failed to complete product system. ", e);
 		}
@@ -71,7 +72,7 @@ class BuildSupplyChainAction extends Action implements IBuildAction {
 		@Override
 		public void run(IProgressMonitor monitor)
 				throws InvocationTargetException, InterruptedException {
-			monitor.beginTask(Messages.Systems_CreatingProductSystem,
+			monitor.beginTask(Messages.CreatingProductSystem,
 					IProgressMonitor.UNKNOWN);
 			IProductSystemBuilder builder = IProductSystemBuilder.Factory
 					.create(Cache.getMatrixCache(),

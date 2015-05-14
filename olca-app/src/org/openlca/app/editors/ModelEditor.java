@@ -1,27 +1,34 @@
 package org.openlca.app.editors;
 
-import com.google.common.eventbus.EventBus;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.dialogs.InputDialog;
+import org.eclipse.jface.window.Window;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.forms.editor.FormEditor;
+import org.openlca.app.App;
 import org.openlca.app.Event;
+import org.openlca.app.Messages;
 import org.openlca.app.db.Cache;
 import org.openlca.app.db.Database;
 import org.openlca.app.events.EventHandler;
 import org.openlca.app.navigation.Navigator;
 import org.openlca.app.util.Labels;
+import org.openlca.app.util.UI;
 import org.openlca.core.database.BaseDao;
 import org.openlca.core.database.EntityCache;
 import org.openlca.core.model.CategorizedEntity;
 import org.openlca.core.model.Version;
 import org.openlca.core.model.descriptors.BaseDescriptor;
+import org.openlca.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.google.common.eventbus.EventBus;
 
 public abstract class ModelEditor<T extends CategorizedEntity> extends
 		FormEditor implements IEditor {
@@ -74,8 +81,8 @@ public abstract class ModelEditor<T extends CategorizedEntity> extends
 	@Override
 	public void doSave(IProgressMonitor monitor) {
 		try {
-			monitor.beginTask("Save " + modelClass.getSimpleName() + "...",
-					IProgressMonitor.UNKNOWN);
+			monitor.beginTask(Messages.Save + " " + modelClass.getSimpleName()
+					+ "...", IProgressMonitor.UNKNOWN);
 			model.setLastChange(System.currentTimeMillis());
 			Version version = new Version(model.getVersion());
 			version.incUpdate();
@@ -128,12 +135,33 @@ public abstract class ModelEditor<T extends CategorizedEntity> extends
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public void doSaveAs() {
+		InputDialog diag = new InputDialog(UI.shell(), Messages.SaveAs,
+				Messages.SaveAs, model.getName() + " - Copy",
+				(name) -> {
+					if (Strings.nullOrEmpty(name))
+						return Messages.NameCannotBeEmpty;
+					if (Strings.nullOrEqual(name, model.getName()))
+						return "#The name should be different";
+					return null;
+				});
+		if (diag.open() != Window.OK)
+			return;
+		String newName = diag.getValue();
+		try {
+			T clone = (T) model.clone();
+			clone.setName(newName);
+			clone = dao.insert(clone);
+			App.openEditor(clone);
+		} catch (Exception e) {
+			log.error("failed to save " + model + " as " + newName, e);
+		}
 	}
 
 	@Override
 	public boolean isSaveAsAllowed() {
-		return false;
+		return true;
 	}
 
 	public T getModel() {

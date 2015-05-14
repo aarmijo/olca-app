@@ -1,10 +1,8 @@
 package org.openlca.app.wizards.io;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.ui.IImportWizard;
@@ -14,12 +12,11 @@ import org.openlca.app.Messages;
 import org.openlca.app.db.Cache;
 import org.openlca.app.db.Database;
 import org.openlca.app.navigation.Navigator;
-import org.openlca.app.resources.ImageType;
+import org.openlca.app.rcp.ImageType;
 import org.openlca.io.ilcd.ILCDImport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * Import wizard for the import of a set of ILCD files.
- */
 public class ILCDImportWizard extends Wizard implements IImportWizard {
 
 	private FileImportPage importPage;
@@ -36,20 +33,22 @@ public class ILCDImportWizard extends Wizard implements IImportWizard {
 
 	@Override
 	public void init(IWorkbench workbench, IStructuredSelection selection) {
-		setWindowTitle(Messages.ILCDImportWizard_WindowTitle);
+		setWindowTitle(Messages.ImportILCD);
 		setDefaultPageImageDescriptor(ImageType.IMPORT_ZIP_WIZARD
 				.getDescriptor());
 	}
 
 	@Override
 	public boolean performFinish() {
-		final File zip = getZip();
+		File zip = getZip();
 		if (zip == null)
 			return false;
 		try {
 			doRun(zip);
 			return true;
-		} catch (final Exception e) {
+		} catch (Exception e) {
+			Logger log = LoggerFactory.getLogger(getClass());
+			log.error("ILCD import failed", e);
 			return false;
 		} finally {
 			Navigator.refresh();
@@ -64,18 +63,14 @@ public class ILCDImportWizard extends Wizard implements IImportWizard {
 		return null;
 	}
 
-	private void doRun(final File zip) throws Exception {
-		getContainer().run(true, true, new IRunnableWithProgress() {
-			@Override
-			public void run(IProgressMonitor monitor)
-					throws InvocationTargetException, InterruptedException {
-				monitor.beginTask("Import: ", IProgressMonitor.UNKNOWN);
-				ImportHandler handler = new ImportHandler(monitor);
-				ILCDImport iImport = new ILCDImport(zip, Database.get());
-				if (App.runsInDevMode())
-					iImport.setImportFlows(true);
-				handler.run(iImport);
-			}
+	private void doRun(File zip) throws Exception {
+		getContainer().run(true, true, (monitor) -> {
+			monitor.beginTask(Messages.Import, IProgressMonitor.UNKNOWN);
+			ImportHandler handler = new ImportHandler(monitor);
+			ILCDImport iImport = new ILCDImport(zip, Database.get());
+			if (App.runsInDevMode())
+				iImport.setImportFlows(true);
+			handler.run(iImport);
 		});
 	}
 

@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.swt.widgets.Display;
+import org.openlca.app.Messages;
 import org.openlca.core.math.Simulator;
 
 /**
@@ -29,8 +30,9 @@ class SimulationProgress implements IRunnableWithProgress {
 	@Override
 	public void run(IProgressMonitor monitor) throws InvocationTargetException,
 			InterruptedException {
-		monitor.beginTask("Simulation...", numberOfRuns);
-		for (int i = 0; i < numberOfRuns; i++) {
+		// one simulation has already be done at init step, so only (numberOfRuns - 1) remains
+		monitor.beginTask(Messages.MonteCarloSimulation + "...", numberOfRuns-1);
+		for (int i = 0; i < numberOfRuns-1; i++) {
 			if (monitor.isCanceled()) {
 				doneAfter(i);
 				break;
@@ -38,7 +40,7 @@ class SimulationProgress implements IRunnableWithProgress {
 			doNextRun();
 		}
 		monitor.done();
-		doneAfter(numberOfRuns);
+		doneAfter(numberOfRuns-1);
 	}
 
 	private void doneAfter(final int numberOfRuns) {

@@ -8,7 +8,9 @@ import org.openlca.app.Preferences;
  */
 public enum FeatureFlag {
 
-	USE_MOZILLA_BROWSER("Use Mozilla browser (not available on every platform)"),
+	// the refresh buttons work but currently get always the keyboard focus
+	// which looks a bit ugly
+	SHOW_REFRESH_BUTTONS("Show refresh buttons in editors"),
 
 	LOCALISED_LCIA("Enable localised impact assessment"),
 
@@ -18,9 +20,9 @@ public enum FeatureFlag {
 
 	MATRIX_IMAGE_EXPORT("Enable matrix image export"),
 
-	PRODUCT_SYSTEM_CUTOFF("Enable cut-offs in product system creations"),
+	// PRODUCT_SYSTEM_CUTOFF("Enable cut-offs in product system creations");
 
-	REPORTS("Create reports for project results");
+	ECOSPOLD1_EXPORT_CONFIG("EcoSpold 1 export configuration");
 
 	// AUTOMATIC_UPDATES("Enable automatic updates");
 

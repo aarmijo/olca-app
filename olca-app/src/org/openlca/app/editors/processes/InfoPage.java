@@ -1,7 +1,6 @@
 package org.openlca.app.editors.processes;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridLayout;
@@ -22,7 +21,10 @@ import org.openlca.app.editors.processes.kml.EditorHandler;
 import org.openlca.app.editors.processes.kml.KmlUtil;
 import org.openlca.app.editors.processes.kml.MapEditor;
 import org.openlca.app.editors.processes.kml.TextEditor;
-import org.openlca.app.resources.ImageType;
+import org.openlca.app.preferencepages.FeatureFlag;
+import org.openlca.app.rcp.ImageType;
+import org.openlca.app.util.Controls;
+import org.openlca.app.util.Editors;
 import org.openlca.app.util.UI;
 import org.openlca.app.viewers.combo.ExchangeViewer;
 import org.openlca.app.viewers.combo.LocationViewer;
@@ -55,6 +57,8 @@ class InfoPage extends ModelPage<Process> {
 	protected void createFormContent(IManagedForm managedForm) {
 		form = UI.formHeader(managedForm, Messages.Process + ": "
 				+ getModel().getName());
+		if (FeatureFlag.SHOW_REFRESH_BUTTONS.isEnabled())
+			Editors.addRefresh(form, editor);
 		toolkit = managedForm.getToolkit();
 		Composite body = UI.formBody(form, toolkit);
 		InfoSection infoSection = new InfoSection(getEditor());
@@ -75,11 +79,8 @@ class InfoPage extends ModelPage<Process> {
 		Button button = toolkit.createButton(container,
 				Messages.CreateProductSystem, SWT.NONE);
 		button.setImage(ImageType.PRODUCT_SYSTEM_ICON_NEW.get());
-		button.addSelectionListener(new SelectionAdapter() {
-			@Override
-			public void widgetSelected(SelectionEvent e) {
-				SystemCreation.run(getModel());
-			}
+		Controls.onSelect(button, (e) -> {
+			SystemCreation.run(getModel());
 		});
 	}
 
@@ -100,14 +101,14 @@ class InfoPage extends ModelPage<Process> {
 
 	private void createTechnologySection(Composite body) {
 		Composite composite = UI.formSection(body, toolkit,
-				Messages.TechnologyInfoSectionLabel);
+				Messages.Technology);
 		createMultiText(Messages.Description, "documentation.technology",
 				composite);
 	}
 
 	private void createTimeSection(Composite body) {
 		Composite composite = UI.formSection(body, toolkit,
-				Messages.TimeInfoSectionLabel);
+				Messages.Time);
 		createDate(Messages.StartDate, "documentation.validFrom", composite);
 		createDate(Messages.EndDate, "documentation.validUntil", composite);
 		createMultiText(Messages.Description, "documentation.time", composite);
@@ -115,7 +116,7 @@ class InfoPage extends ModelPage<Process> {
 
 	private void createGeographySection(Composite body) {
 		Composite composite = UI.formSection(body, toolkit,
-				Messages.GeographyInfoSectionLabel);
+				Messages.Geography);
 		toolkit.createLabel(composite, Messages.Location);
 		LocationViewer viewer = new LocationViewer(composite);
 		viewer.setNullable(true);
@@ -146,11 +147,8 @@ class InfoPage extends ModelPage<Process> {
 		Button textButton = toolkit.createButton(composite, "Text editor",
 				SWT.NONE);
 		textButton.setImage(ImageType.FILE_MARKUP_SMALL.get());
-		textButton.addSelectionListener(new SelectionAdapter() {
-			@Override
-			public void widgetSelected(SelectionEvent e) {
-				TextEditor.open(getKml(), new MapEditorDispatch());
-			}
+		Controls.onSelect(textButton, (e) -> {
+			TextEditor.open(getKml(), new MapEditorDispatch());
 		});
 	}
 

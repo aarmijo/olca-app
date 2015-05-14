@@ -19,7 +19,7 @@ import org.openlca.app.db.MySQLConfiguration;
 import org.openlca.app.navigation.DatabaseElement;
 import org.openlca.app.navigation.INavigationElement;
 import org.openlca.app.navigation.Navigator;
-import org.openlca.app.resources.ImageType;
+import org.openlca.app.rcp.ImageType;
 import org.openlca.app.util.Editors;
 import org.openlca.app.util.UI;
 import org.slf4j.Logger;
@@ -115,10 +115,10 @@ public class DatabaseDeleteAction extends Action implements INavigationAction {
 		String name = configs.size() == 1 ? configs.get(0).getName()
 				: "the selected databases";
 		return new MessageDialog(UI.shell(), Messages.Delete, null, NLS.bind(
-				Messages.NavigationView_DeleteQuestion, name),
+				Messages.DoYouReallyWantToDelete, name),
 				MessageDialog.QUESTION, new String[] {
-						Messages.NavigationView_YesButton,
-						Messages.NavigationView_NoButton, },
+						Messages.Yes,
+						Messages.No, },
 				MessageDialog.CANCEL);
 	}
 

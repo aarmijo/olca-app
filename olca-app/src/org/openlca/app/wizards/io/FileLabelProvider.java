@@ -5,8 +5,7 @@ import java.io.File;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.ISharedImages;
-import org.eclipse.ui.PlatformUI;
-import org.openlca.app.resources.ImageType;
+import org.openlca.app.rcp.ImageType;
 
 /**
  * Label provider for files.
@@ -22,13 +21,16 @@ class FileLabelProvider extends LabelProvider {
 
 	private Image getImage(File file) {
 		if (file.isDirectory())
-			return PlatformUI.getWorkbench().getSharedImages()
-					.getImage(ISharedImages.IMG_OBJ_FOLDER);
+			return ImageType
+					.getPlatformImage(ISharedImages.IMG_OBJ_FOLDER);
 		if (hasExtension(file, ".xml"))
 			return ImageType.XML_ICON.get();
 		if (hasExtension(file, ".zip"))
 			return ImageType.ZIP_ICON.get();
-		return ImageType.FILE_SMALL.get();
+		if (hasExtension(file, ".xls") || hasExtension(file, ".xlsx"))
+			return ImageType.FILE_EXCEL_SMALL.get();
+		else
+			return ImageType.FILE_SMALL.get();
 	}
 
 	private boolean hasExtension(File file, String extension) {

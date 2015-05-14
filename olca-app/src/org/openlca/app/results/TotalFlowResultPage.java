@@ -1,6 +1,7 @@
 package org.openlca.app.results;
 
-import com.google.common.primitives.Doubles;
+import java.util.Collection;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jface.viewers.BaseLabelProvider;
 import org.eclipse.jface.viewers.ITableLabelProvider;
@@ -17,8 +18,11 @@ import org.eclipse.ui.forms.widgets.ScrolledForm;
 import org.eclipse.ui.forms.widgets.Section;
 import org.openlca.app.Messages;
 import org.openlca.app.db.Cache;
+import org.openlca.app.util.Actions;
+import org.openlca.app.util.Images;
 import org.openlca.app.util.Labels;
 import org.openlca.app.util.Numbers;
+import org.openlca.app.util.TableClipboard;
 import org.openlca.app.util.TableColumnSorter;
 import org.openlca.app.util.Tables;
 import org.openlca.app.util.UI;
@@ -27,7 +31,7 @@ import org.openlca.core.matrix.FlowIndex;
 import org.openlca.core.model.descriptors.FlowDescriptor;
 import org.openlca.core.results.SimpleResultProvider;
 
-import java.util.Collection;
+import com.google.common.primitives.Doubles;
 
 /**
  * Shows the total inventory result of a quick calculation, analysis result,
@@ -46,14 +50,15 @@ public class TotalFlowResultPage extends FormPage {
 	private SimpleResultProvider<?> resultProvider;
 
 	public TotalFlowResultPage(FormEditor editor,
-	                           SimpleResultProvider<?> resultProvider) {
-		super(editor, "InventoryResultPage", "Inventory results");
+			SimpleResultProvider<?> resultProvider) {
+		super(editor, "InventoryResultPage", Messages.InventoryResults);
 		this.resultProvider = resultProvider;
 	}
 
 	@Override
 	protected void createFormContent(IManagedForm managedForm) {
-		ScrolledForm form = UI.formHeader(managedForm, "Inventory results");
+		ScrolledForm form = UI.formHeader(managedForm,
+				Messages.InventoryResults);
 		toolkit = managedForm.getToolkit();
 		Composite body = UI.formBody(form, toolkit);
 		TableViewer inputViewer = createSectionAndViewer(body, true);
@@ -65,8 +70,8 @@ public class TotalFlowResultPage extends FormPage {
 	}
 
 	private TableViewer createSectionAndViewer(Composite parent, boolean input) {
-		Section section = UI.section(parent, toolkit, input ? "Inputs"
-				: "Outputs");
+		Section section = UI.section(parent, toolkit, input ? Messages.Inputs
+				: Messages.Outputs);
 		UI.gridData(section, true, true);
 		Composite composite = toolkit.createComposite(section);
 		section.setClient(composite);
@@ -78,35 +83,39 @@ public class TotalFlowResultPage extends FormPage {
 		viewer.setFilters(new ViewerFilter[] { new InputOutputFilter(input) });
 		createColumnSorters(viewer, labelProvider);
 		Tables.bindColumnWidths(viewer.getTable(), 0.40, 0.20, 0.20, 0.08, 0.10);
+		Actions.bind(viewer, TableClipboard.onCopy(viewer));
 		return viewer;
 	}
 
 	private void createColumnSorters(TableViewer viewer, LabelProvider p) {
-		//@formatter:off
-		Tables.registerSorters(viewer, 
+		Tables.registerSorters(viewer,
 				new TableColumnSorter<>(FlowDescriptor.class, 0, p),
 				new TableColumnSorter<>(FlowDescriptor.class, 1, p),
 				new TableColumnSorter<>(FlowDescriptor.class, 2, p),
 				new TableColumnSorter<>(FlowDescriptor.class, 3, p),
 				new AmountSorter());
-		//@formatter:on
 	}
 
 	private class LabelProvider extends BaseLabelProvider implements
 			ITableLabelProvider {
 
 		@Override
-		public Image getColumnImage(Object element, int columnIndex) {
-			return null;
+		public Image getColumnImage(Object element, int col) {
+			if (col != 0)
+				return null;
+			if (!(element instanceof FlowDescriptor))
+				return null;
+			FlowDescriptor flow = (FlowDescriptor) element;
+			return Images.getIcon(flow.getFlowType());
 		}
 
 		@Override
-		public String getColumnText(Object element, int columnIndex) {
+		public String getColumnText(Object element, int col) {
 			if (!(element instanceof FlowDescriptor))
 				return null;
 			FlowDescriptor flow = (FlowDescriptor) element;
 			Pair<String, String> category = Labels.getFlowCategory(flow, cache);
-			switch (columnIndex) {
+			switch (col) {
 			case 0:
 				return Labels.getDisplayName(flow);
 			case 1:

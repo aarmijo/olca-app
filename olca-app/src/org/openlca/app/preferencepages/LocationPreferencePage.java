@@ -10,14 +10,10 @@ import org.eclipse.jface.preference.PreferencePage;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.CellEditor;
 import org.eclipse.jface.viewers.ICellModifier;
-import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.LabelProvider;
-import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.TextCellEditor;
-import org.eclipse.jface.viewers.Viewer;
-import org.eclipse.jface.viewers.ViewerSorter;
 import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.osgi.util.NLS;
@@ -38,11 +34,11 @@ import org.eclipse.ui.forms.widgets.Section;
 import org.openlca.app.Messages;
 import org.openlca.app.components.delete.DeleteWizard;
 import org.openlca.app.db.Database;
-import org.openlca.app.resources.ImageType;
+import org.openlca.app.rcp.ImageType;
 import org.openlca.app.util.Question;
+import org.openlca.app.util.TableClipboard;
 import org.openlca.app.util.UI;
 import org.openlca.app.util.Viewers;
-import org.openlca.app.viewers.BaseNameSorter;
 import org.openlca.core.database.BaseDao;
 import org.openlca.core.database.IDatabase;
 import org.openlca.core.database.usage.IUseSearch;
@@ -59,10 +55,9 @@ public class LocationPreferencePage extends PreferencePage implements
 
 	private Logger log = LoggerFactory.getLogger(this.getClass());
 
-	private AddLocationAction addLocationAction;
 	private IDatabase database;
 	private final List<Location> locations = new ArrayList<>();
-	private TableViewer locationViewer;
+	private TableViewer viewer;
 	private boolean dirty;
 
 	private final String CODE = Messages.Code;
@@ -74,54 +69,60 @@ public class LocationPreferencePage extends PreferencePage implements
 	private final String[] PROPERTIES = new String[] { NAME, DESCRIPTION, CODE,
 			LATITUDE, LONGITUDE };
 
-	private RemoveLocationAction removeLocationAction;
-
 	@Override
-	public void init(final IWorkbench workbench) {
+	public void init(IWorkbench workbench) {
 		database = Database.get();
 	}
 
 	@Override
-	public void createControl(final Composite parent) {
+	public void createControl(Composite parent) {
 		super.createControl(parent);
 		getApplyButton().setEnabled(false);
 		getDefaultsButton().setVisible(false);
 	}
 
 	@Override
-	protected Control createContents(final Composite parent) {
-		final Composite body = new Composite(parent, SWT.NONE);
+	protected Control createContents(Composite parent) {
+		Composite body = new Composite(parent, SWT.NONE);
 		body.setLayout(new GridLayout());
 
-		// create section for the location viewer
-		final Section section = new Section(body, ExpandableComposite.NO_TITLE);
+		Section section = new Section(body, ExpandableComposite.NO_TITLE);
 		section.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-		final Composite composite = new Composite(section, SWT.NONE);
+		Composite composite = new Composite(section, SWT.NONE);
 
-		final GridLayout layout = new GridLayout();
+		GridLayout layout = new GridLayout();
 		layout.marginWidth = 10;
 		layout.marginHeight = 10;
 		composite.setLayout(layout);
 		composite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		section.setClient(composite);
 
-		// create table viewer for displaying locations
-		locationViewer = new TableViewer(composite, SWT.BORDER
-				| SWT.FULL_SELECTION | SWT.NO_REDRAW_RESIZE | SWT.V_SCROLL);
-		locationViewer.setContentProvider(new ArrayContentProvider());
-		locationViewer.setSorter(new BaseNameSorter());
-		locationViewer.setLabelProvider(new LocationLabelProvider());
-		locationViewer.getTable().setEnabled(false);
+		createViewer(composite);
+		Table table = configureTable(parent);
+		createActionBars(section, table);
+		createCellEditors(table);
+		new Label(body, SWT.NONE).setLayoutData(new GridData(SWT.FILL,
+				SWT.FILL, true, true)); // placeholder
+		initData();
+		return body;
+	}
 
-		// configure table
-		final Table table = locationViewer.getTable();
+	private void createViewer(Composite composite) {
+		viewer = new TableViewer(composite, SWT.BORDER | SWT.MULTI
+				| SWT.FULL_SELECTION | SWT.NO_REDRAW_RESIZE | SWT.V_SCROLL);
+		viewer.setContentProvider(ArrayContentProvider.getInstance());
+		viewer.setLabelProvider(new LocationLabelProvider());
+		viewer.getTable().setEnabled(false);
+	}
+
+	private Table configureTable(Composite parent) {
+		Table table = viewer.getTable();
 		table.setLinesVisible(true);
 		table.setHeaderVisible(true);
-		final GridData gd = new GridData(SWT.FILL, SWT.FILL, true, true);
+		GridData gd = new GridData(SWT.FILL, SWT.FILL, true, true);
 		gd.heightHint = parent.getParent()
 				.computeSize(SWT.DEFAULT, SWT.DEFAULT).y;
 		table.setLayoutData(gd);
-
 		for (String p : PROPERTIES) {
 			TableColumn c = new TableColumn(table, SWT.NULL);
 			c.setText(p);
@@ -132,41 +133,36 @@ public class LocationPreferencePage extends PreferencePage implements
 			else
 				c.pack();
 		}
+		return table;
+	}
 
-		// create table's tool bar
-		final ToolBarManager locationBar = new ToolBarManager();
-		addLocationAction = new AddLocationAction();
-		removeLocationAction = new RemoveLocationAction();
-		locationBar.add(addLocationAction);
-		locationBar.add(removeLocationAction);
-
-		// create table's popup menu
-		final MenuManager locationMenu = new MenuManager();
-		section.setTextClient(locationBar.createControl(section));
-		locationMenu.add(addLocationAction);
-		locationMenu.add(removeLocationAction);
-		table.setMenu(locationMenu.createContextMenu(table));
-
-		addLocationAction.setEnabled(false);
-		removeLocationAction.setEnabled(false);
-
-		// create cell editors
-		final CellEditor[] editors = new CellEditor[PROPERTIES.length];
+	private void createCellEditors(Table table) {
+		CellEditor[] editors = new CellEditor[PROPERTIES.length];
 		for (int i = 0; i < editors.length; i++) {
 			editors[i] = new TextCellEditor(table);
 		}
+		viewer.setColumnProperties(PROPERTIES);
+		viewer.setCellModifier(new LocationCellModifier());
+		viewer.setCellEditors(editors);
+	}
 
-		locationViewer.setColumnProperties(PROPERTIES);
-		locationViewer.setCellModifier(new LocationCellModifier());
-		locationViewer.setCellEditors(editors);
-		locationViewer.setSorter(new LocationSorter());
-		// placeholder
-		new Label(body, SWT.NONE).setLayoutData(new GridData(SWT.FILL,
-				SWT.FILL, true, true));
-
-		initListeners();
-		initData();
-		return body;
+	private void createActionBars(Section section, Table table) {
+		if (database == null)
+			return;
+		Action add = new AddLocationAction();
+		Action remove = new RemoveLocationAction();
+		remove.setEnabled(false);
+		viewer.addSelectionChangedListener((event) ->
+				remove.setEnabled(!event.getSelection().isEmpty()));
+		ToolBarManager toolBar = new ToolBarManager();
+		toolBar.add(add);
+		toolBar.add(remove);
+		MenuManager menu = new MenuManager();
+		section.setTextClient(toolBar.createControl(section));
+		menu.add(add);
+		menu.add(remove);
+		menu.add(TableClipboard.onCopy(table));
+		table.setMenu(menu.createContextMenu(table));
 	}
 
 	@Override
@@ -180,34 +176,16 @@ public class LocationPreferencePage extends PreferencePage implements
 		return super.performOk();
 	}
 
-	private void initListeners() {
-		locationViewer
-				.addSelectionChangedListener(new ISelectionChangedListener() {
-
-					@Override
-					public void selectionChanged(
-							final SelectionChangedEvent event) {
-						if (event.getSelection().isEmpty()) {
-							removeLocationAction.setEnabled(false);
-						} else {
-							removeLocationAction.setEnabled(true);
-						}
-					}
-				});
-	}
-
 	private void initData() {
 		if (database == null)
 			return;
-
 		List<Location> objs = database.createDao(Location.class).getAll();
 		locations.clear();
-		for (Location l : objs)
-			locations.add(l);
-		locationViewer
-				.setInput(locations.toArray(new Location[locations.size()]));
-		addLocationAction.setEnabled(true);
-		locationViewer.getTable().setEnabled(true);
+		locations.addAll(objs);
+		locations.sort((loc1, loc2)
+				-> Strings.compare(loc1.getName(), loc2.getName()));
+		viewer.setInput(locations);
+		viewer.getTable().setEnabled(true);
 	}
 
 	@Override
@@ -254,7 +232,7 @@ public class LocationPreferencePage extends PreferencePage implements
 
 		public AddLocationAction() {
 			setId("LocationPreferencePage.AddParameterAction");
-			setText(NLS.bind(Messages.AddAction_Text, Messages.Location));
+			setText(NLS.bind(Messages.CreateNew, Messages.Location));
 			setImageDescriptor(ImageType.ADD_ICON.getDescriptor());
 			setDisabledImageDescriptor(ImageType.ADD_ICON_DISABLED
 					.getDescriptor());
@@ -265,9 +243,9 @@ public class LocationPreferencePage extends PreferencePage implements
 		public void run() {
 			Location location = new Location();
 			location.setName(Messages.Location
-					+ (locationViewer.getTable().getItemCount() + 1));
+					+ (viewer.getTable().getItemCount() + 1));
 			locations.add(location);
-			locationViewer.setInput(locations);
+			viewer.setInput(locations);
 			getApplyButton().setEnabled(true);
 			setDirty(true);
 		}
@@ -277,12 +255,12 @@ public class LocationPreferencePage extends PreferencePage implements
 	private class LocationCellModifier implements ICellModifier {
 
 		@Override
-		public boolean canModify(final Object element, final String property) {
+		public boolean canModify(Object element, String property) {
 			return true;
 		}
 
 		@Override
-		public Object getValue(Object element, final String property) {
+		public Object getValue(Object element, String property) {
 			Object v = null;
 			if (element instanceof Location) {
 				Location location = (Location) element;
@@ -302,14 +280,14 @@ public class LocationPreferencePage extends PreferencePage implements
 		}
 
 		@Override
-		public void modify(Object element, final String property,
-				final Object value) {
+		public void modify(Object element, String property,
+				Object value) {
 			if (element instanceof Item) {
 				element = ((Item) element).getData();
 			}
 
 			if (element instanceof Location) {
-				final Location location = (Location) element;
+				Location location = (Location) element;
 				if (property.equals(NAME)) {
 					location.setName(value.toString());
 				}
@@ -329,12 +307,12 @@ public class LocationPreferencePage extends PreferencePage implements
 					try {
 						double longitude = Double.parseDouble(value.toString());
 						location.setLongitude(longitude);
-					} catch (final NumberFormatException e) {
+					} catch (NumberFormatException e) {
 						log.error("Not a numeric value for latitude", e);
 					}
 				}
 			}
-			locationViewer.refresh();
+			viewer.refresh();
 		}
 	}
 
@@ -373,7 +351,7 @@ public class LocationPreferencePage extends PreferencePage implements
 
 		public RemoveLocationAction() {
 			setId("LocationPreferencePage.RemoveParameterAction");
-			setText(NLS.bind(Messages.RemoveAction_Text, Messages.Location));
+			setText(NLS.bind(Messages.RemoveSelected, Messages.Location));
 			setImageDescriptor(ImageType.DELETE_ICON.getDescriptor());
 			setDisabledImageDescriptor(ImageType.DELETE_ICON_DISABLED
 					.getDescriptor());
@@ -381,7 +359,7 @@ public class LocationPreferencePage extends PreferencePage implements
 
 		@Override
 		public void run() {
-			Location location = Viewers.getFirstSelected(locationViewer);
+			Location location = Viewers.getFirstSelected(viewer);
 			if (location == null)
 				return;
 			DeleteWizard<BaseDescriptor> wizard = new DeleteWizard<>(
@@ -393,22 +371,10 @@ public class LocationPreferencePage extends PreferencePage implements
 
 			if (canDelete) {
 				locations.remove(location);
-				locationViewer.setInput(locations
-						.toArray(new Location[locations.size()]));
+				viewer.setInput(locations);
 				getApplyButton().setEnabled(true);
 				setDirty(true);
 			}
-		}
-	}
-
-	private class LocationSorter extends ViewerSorter {
-		@Override
-		public int compare(Viewer viewer, Object e1, Object e2) {
-			if (!(e1 instanceof Location) || !(e2 instanceof Location))
-				return 0;
-			Location loc1 = (Location) e1;
-			Location loc2 = (Location) e2;
-			return Strings.compare(loc1.getName(), loc2.getName());
 		}
 	}
 
